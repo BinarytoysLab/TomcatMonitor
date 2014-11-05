@@ -11,6 +11,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.binarytoys.tomcatmonitor.model.Tomcat;
 
 /**
  * Created by Admin on 11/4/2014.
@@ -18,51 +19,71 @@ import org.apache.http.util.EntityUtils;
 public class TomcatMonitor {
 	private static final Integer HTTPCLIENT_TIMEOUT = 10000;
 
+	private static final Tomcat[] tomcatsToWatch = {
+			new Tomcat("tomcat-gates", "http://localhost:8081/admin")
+	};
+
 	public static void main(String[] args) throws Exception {
-		String tomcatPID = getTomcatPID();
-		if (tomcatPID.isEmpty()) {
-			System.out.println("Couldn't find running tomcat process");
-			return;
+		System.out.println("Obtaining initial tomcats PIDs...");
+		for (Tomcat tomcat : tomcatsToWatch) {
+			String tomcatPID = getTomcatPID(tomcat);
+			if (tomcatPID.isEmpty()) {
+				System.out.println("ERROR: Couldn't find running tomcat process ID for instance " + tomcat.getInstanceName());
+				return;
+			}
+			tomcat.setProcessId(tomcatPID);
+			System.out.println(tomcat);
 		}
 
-		System.out.println("Tomcat process with ID: " + tomcatPID + " is being checked once per minute");
+		System.out.println("Tomcats will be watched once per minute");
 
 		while (true) {
-			if (!isTomcatAlive()) {
-				System.out.println("Tomcat is not responding, creating thread dump...");
-				try {
-					createThreadsDumpByPID(tomcatPID);
-				} catch (IOException e) {
-					System.out.println(e.getMessage());
-					e.printStackTrace();
-				}
+			for (Tomcat tomcat : tomcatsToWatch) {
+				if (!isTomcatAlive(tomcat.getPingCheckUrl())) {
+					System.out.println(tomcat + " is not responding, creating thread dump...");
 
-				System.out.println("Killing current tomcat process...");
-				runShellCommand("kill -9 " + tomcatPID);
-				System.out.println("Restarting tomcat...");
-				runShellCommand("/home/viktork/Downloads/tomcat-gates/bin/startup.sh start");
-				tomcatPID = getTomcatPID();
-				System.out.println("New tomcat PID is " + tomcatPID);
+					try {
+						createThreadsDumpByPID(tomcat);
+					} catch (IOException e) {
+						System.out.println("Failed to create thread dump: " + e.getMessage());
+						continue;
+					}
+
+					System.out.println("Killing " + tomcat + " process...");
+					runShellCommand("kill -9 " + tomcat.getProcessId());
+					Thread.sleep(1000);
+
+					System.out.println("Restarting tomcat...");
+					runShellCommand(tomcat.getTomcatStartupCommand());
+					String newTomcatPID = getTomcatPID(tomcat);
+					if (newTomcatPID.isEmpty()) {
+						System.out.println("ERROR: Failed to obtain PID for restarted tomcat");
+						return;
+					}
+					tomcat.setProcessId(newTomcatPID);
+					System.out.println("Tomcat was restarted with new PID " + tomcat);
+				}
 			}
 
 			Thread.sleep(60000);
 		}
 	}
 
-	private static String getTomcatPID() throws IOException {
-		Process process = runShellCommand("ps -e -f | grep tomcat-gates");
+	private static String getTomcatPID(Tomcat tomcat) throws IOException {
+		Process process = runShellCommand("ps -e -f | grep " + tomcat.getInstanceName());
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		String commandOutput = bufferedReader.readLine();
 		bufferedReader.close();
-        StringTokenizer st = new StringTokenizer(commandOutput);
-        for (int i = 0; i < 2; i++) {
-            commandOutput = st.nextToken();
-        }
-        return commandOutput;
+		StringTokenizer st = new StringTokenizer(commandOutput);
+		for (int i = 0; i < 2; i++) {
+			commandOutput = st.nextToken();
+		}
+		return commandOutput;
 	}
 
-	private static void createThreadsDumpByPID(String pid) throws IOException {
-		String jstackCmd = "jstack " + pid + " >> /var/speedo/logs/" + System.currentTimeMillis() + ".dump";
+	private static void createThreadsDumpByPID(Tomcat tomcat) throws IOException {
+		String jstackCmd = "jstack " + tomcat.getProcessId() + " >> /var/speedo/logs/" + System.currentTimeMillis()
+				+ "." + tomcat.getInstanceName() + ".dump";
 		Process process = runShellCommand(jstackCmd);
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		bufferedReader.close();
@@ -76,14 +97,14 @@ public class TomcatMonitor {
 		return Runtime.getRuntime().exec(cmdLine);
 	}
 
-	private static boolean isTomcatAlive() {
+	private static boolean isTomcatAlive(String pingCheckUrl) {
 		RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(HTTPCLIENT_TIMEOUT)
 				.setSocketTimeout(HTTPCLIENT_TIMEOUT).setConnectionRequestTimeout(HTTPCLIENT_TIMEOUT)
 				.setStaleConnectionCheckEnabled(true).build();
 		CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(requestConfig).build();
 
 		try {
-			HttpGet httpGet = new HttpGet("http://localhost:8080/admin");
+			HttpGet httpGet = new HttpGet(pingCheckUrl);
 			CloseableHttpResponse response = client.execute(httpGet);
 
 			EntityUtils.consume(response.getEntity());
