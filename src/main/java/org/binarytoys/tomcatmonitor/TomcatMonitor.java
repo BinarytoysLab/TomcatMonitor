@@ -19,8 +19,11 @@ import org.binarytoys.tomcatmonitor.model.Tomcat;
 public class TomcatMonitor {
 	private static final Integer HTTPCLIENT_TIMEOUT = 10000;
 
+	private static final Boolean debugMode = true;
+
 	private static final Tomcat[] tomcatsToWatch = {
-			new Tomcat("tomcat-gates", "http://localhost:8081/admin")
+//			new Tomcat("tomcat-gates", "http://localhost:8081/admin")
+			new Tomcat("tomcat", "http://localhost:8080/admin")
 	};
 
 	public static void main(String[] args) throws Exception {
@@ -40,7 +43,7 @@ public class TomcatMonitor {
 		while (true) {
 			for (Tomcat tomcat : tomcatsToWatch) {
 				if (!isTomcatAlive(tomcat.getPingCheckUrl())) {
-					System.out.println(tomcat + " is not responding, creating thread dump...");
+					System.out.println("ERROR: " + tomcat + " is not responding, creating thread dump...");
 
 					try {
 						createThreadsDumpByPID(tomcat);
@@ -49,19 +52,21 @@ public class TomcatMonitor {
 						continue;
 					}
 
-					System.out.println("Killing " + tomcat + " process...");
-					runShellCommand("kill -9 " + tomcat.getProcessId());
-					Thread.sleep(1000);
+					if (!debugMode) {
+						System.out.println("Killing " + tomcat + " process...");
+						runShellCommand("kill -9 " + tomcat.getProcessId());
+						Thread.sleep(1000);
 
-					System.out.println("Restarting tomcat...");
-					runShellCommand(tomcat.getTomcatStartupCommand());
-					String newTomcatPID = getTomcatPID(tomcat);
-					if (newTomcatPID.isEmpty()) {
-						System.out.println("ERROR: Failed to obtain PID for restarted tomcat");
-						return;
+						System.out.println("Restarting tomcat...");
+						runShellCommand(tomcat.getTomcatStartupCommand());
+						String newTomcatPID = getTomcatPID(tomcat);
+						if (newTomcatPID.isEmpty()) {
+							System.out.println("ERROR: Failed to obtain PID for restarted tomcat");
+							return;
+						}
+						tomcat.setProcessId(newTomcatPID);
+						System.out.println("Tomcat was restarted with new PID " + tomcat);
 					}
-					tomcat.setProcessId(newTomcatPID);
-					System.out.println("Tomcat was restarted with new PID " + tomcat);
 				}
 			}
 
