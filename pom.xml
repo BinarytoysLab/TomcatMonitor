@@ -15,6 +15,14 @@
         </pluginRepository>
     </pluginRepositories>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.3</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <finalName>TomcatMonitor</finalName>
         <plugins>
@@ -67,6 +75,7 @@
                     <execution>
                         <configuration>
                             <mainClass>org.binarytoys.tomcatmonitor.TomcatMonitor</mainClass>
+                            <filename>${project.build.finalName}.jar</filename>
                         </configuration>
                         <goals>
                             <goal>one-jar</goal>
