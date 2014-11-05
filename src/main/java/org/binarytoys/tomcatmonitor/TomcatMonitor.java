@@ -55,6 +55,7 @@ public class TomcatMonitor {
 
 					System.out.println("Restarting tomcat...");
 					runShellCommand(tomcat.getTomcatStartupCommand());
+                    Thread.sleep(1000);
 					String newTomcatPID = getTomcatPID(tomcat);
 					if (newTomcatPID.isEmpty()) {
 						System.out.println("ERROR: Failed to obtain PID for restarted tomcat");
