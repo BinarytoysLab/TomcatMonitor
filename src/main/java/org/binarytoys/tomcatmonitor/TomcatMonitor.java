@@ -3,6 +3,7 @@ package org.binarytoys.tomcatmonitor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Calendar;
 import java.util.StringTokenizer;
 
 import org.apache.http.client.config.RequestConfig;
@@ -14,7 +15,7 @@ import org.apache.http.util.EntityUtils;
 import org.binarytoys.tomcatmonitor.model.Tomcat;
 
 /**
- * Created by Admin on 11/4/2014.
+ * Created by alekspo on 11/4/2014.
  */
 public class TomcatMonitor {
 	private static final Integer HTTPCLIENT_TIMEOUT = 10000;
@@ -43,7 +44,8 @@ public class TomcatMonitor {
 		while (true) {
 			for (Tomcat tomcat : tomcatsToWatch) {
 				if (!isTomcatAlive(tomcat.getPingCheckUrl())) {
-					System.out.println("ERROR: " + tomcat + " is not responding, creating thread dump...");
+					System.out.println("ERROR (" + Calendar.getInstance().getTime() + "): " + tomcat
+							+ " is not responding, creating thread dump...");
 
 					try {
 						createThreadsDumpByPID(tomcat);
