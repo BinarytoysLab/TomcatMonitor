@@ -3,6 +3,7 @@ package org.binarytoys.tomcatmonitor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.StringTokenizer;
 
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -18,8 +19,8 @@ public class TomcatMonitor {
 	private static final Integer HTTPCLIENT_TIMEOUT = 10000;
 
 	public static void main(String[] args) throws Exception {
-		Integer tomcatPID = Integer.valueOf(getTomcatPID());
-		if (tomcatPID == null) {
+		String tomcatPID = getTomcatPID();
+		if (tomcatPID.isEmpty()) {
 			System.out.println("Couldn't find running tomcat process");
 			return;
 		}
@@ -40,7 +41,7 @@ public class TomcatMonitor {
 				runShellCommand("kill -9 " + tomcatPID);
 				System.out.println("Restarting tomcat...");
 				runShellCommand("/home/viktork/Downloads/tomcat-gates/bin/startup.sh start");
-				tomcatPID = Integer.valueOf(getTomcatPID());
+				tomcatPID = getTomcatPID();
 				System.out.println("New tomcat PID is " + tomcatPID);
 			}
 
@@ -53,10 +54,14 @@ public class TomcatMonitor {
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		String commandOutput = bufferedReader.readLine();
 		bufferedReader.close();
-		return commandOutput.split(" ")[2];
+        StringTokenizer st = new StringTokenizer(commandOutput);
+        for (int i = 0; i < 2; i++) {
+            commandOutput = st.nextToken();
+        }
+        return commandOutput;
 	}
 
-	private static void createThreadsDumpByPID(Integer pid) throws IOException {
+	private static void createThreadsDumpByPID(String pid) throws IOException {
 		String jstackCmd = "jstack " + pid + " >> /var/speedo/logs/" + System.currentTimeMillis() + ".dump";
 		Process process = runShellCommand(jstackCmd);
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
