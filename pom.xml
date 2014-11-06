@@ -75,7 +75,7 @@
                     <execution>
                         <configuration>
                             <mainClass>org.binarytoys.tomcatmonitor.TomcatMonitor</mainClass>
-                            <filename>${project.build.finalName}.jar</filename>
+                            <filename>${project.build.finalName}.one.jar</filename>
                         </configuration>
                         <goals>
                             <goal>one-jar</goal>

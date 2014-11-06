@@ -23,7 +23,7 @@ public class TomcatMonitor {
 
 	private static final Tomcat[] tomcatsToWatch = {
 //			new Tomcat("tomcat-gates", "http://localhost:8081/admin")
-			new Tomcat("tomcat", "http://localhost:8080/admin")
+			new Tomcat("apache-tomcat-7.0.47", "http://localhost:8080/admin")
 	};
 
 	public static void main(String[] args) throws Exception {
@@ -76,10 +76,11 @@ public class TomcatMonitor {
 	}
 
 	private static String getTomcatPID(Tomcat tomcat) throws IOException {
-		Process process = runShellCommand("ps -e -f | grep " + tomcat.getInstanceName());
+		Process process = runShellCommand("ps -ef | grep " + tomcat.getInstanceName() + " | grep Bootstrap");
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
 		String commandOutput = bufferedReader.readLine();
-		bufferedReader.close();
+        commandOutput = bufferedReader.readLine(); // discard first grep
+        bufferedReader.close();
 		StringTokenizer st = new StringTokenizer(commandOutput);
 		for (int i = 0; i < 2; i++) {
 			commandOutput = st.nextToken();
