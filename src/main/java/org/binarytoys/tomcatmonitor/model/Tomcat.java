@@ -1,7 +1,7 @@
 package org.binarytoys.tomcatmonitor.model;
 
 /**
- * Created by Admin on 11/5/2014.
+ * Created by alekspo on 11/5/2014.
  */
 public class Tomcat {
 	private String instanceName;
@@ -37,7 +37,7 @@ public class Tomcat {
 
 	@Override
 	public String toString() {
-		return "Tomcat{" +
+		return "Tomcat {" +
 				"instanceName='" + instanceName + '\'' +
 				", processId='" + processId + '\'' +
 				'}';
